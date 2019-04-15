@@ -58,7 +58,7 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
-        self.fc = nn.Linear(14 * 14 * 256, num_classes)
+        self.fc = nn.Linear(6 * 6 * 256, num_classes)
 
     def forward(self, x):
         out = self.layer1(x)
