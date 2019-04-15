@@ -4,7 +4,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 # Device configuration
-device = torch.device('cuda:0')
+device = torch.device('cuda:2')
 
 # Hyper parameters
 num_epochs = 5
