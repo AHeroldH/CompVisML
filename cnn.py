@@ -134,9 +134,7 @@ for epoch in range(num_epochs):
     avg_train_losses.append(train_loss)
     avg_valid_losses.append(valid_loss)
 
-    print('Epoch [{}/{}] ' +
-          'train_loss: {:.5f} ' +
-          'valid_loss: {:.5f}'.format(epoch, num_epochs, train_loss, valid_loss))
+    print('Epoch [{}/{}] train_loss: {:.5f} valid_loss: {:.5f}'.format(epoch+1, num_epochs, train_loss, valid_loss))
 
     # clear lists to track next epoch
     train_losses = []
