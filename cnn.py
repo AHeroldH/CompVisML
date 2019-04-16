@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from pytorchtools import EarlyStopping
+from  pytorchtools import EarlyStopping
 import numpy as np
 
 # Device configuration
