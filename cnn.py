@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+from pytorchtools import EarlyStopping
+import numpy as np
 
 # Device configuration
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 12
+num_epochs = 100
 num_classes = 29
 batch_size = 50
 learning_rate = 0.0001
@@ -16,7 +18,10 @@ learning_rate = 0.0001
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages/',
                                                  transform=transforms.ToTensor())
 
-test_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages/',
+test_dataset = torchvision.datasets.ImageFolder(root='OwnTest/',
+                                                transform=transforms.ToTensor())
+
+valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                 transform=transforms.ToTensor())
 
 # Data loader
@@ -25,6 +30,10 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            shuffle=True)
 
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                          batch_size=batch_size,
+                                          shuffle=False)
+
+valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                           batch_size=batch_size,
                                           shuffle=False)
 
@@ -78,9 +87,21 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 # Train the model
+
+# to track the training loss as the model trains
+train_losses = []
+# to track the validation loss as the model trains
+valid_losses = []
+# to track the average training loss per epoch as the model trains
+avg_train_losses = []
+# to track the average validation loss per epoch as the model trains
+avg_valid_losses = []
+
 total_step = len(train_loader)
+early_stopping = EarlyStopping(patience=20, verbose=True) #early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
-    for i, (images, labels) in enumerate(train_loader):
+    model.train()
+    for images, labels in train_loader:
         images = images.to(device)
         labels = labels.to(device)
 
@@ -93,24 +114,77 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-        if (i + 1) % 100 == 0:
-            print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
-                   .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+        train_losses.append(loss.item())
+
+    model.eval()
+    for images, labels in valid_loader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        # forward pass: compute predicted outputs by passing inputs to the model
+        output = model(images)
+        # calculate the loss
+        loss = criterion(output, labels)
+        # record validation loss
+        valid_losses.append(loss.item())
+
+    train_loss = np.average(train_losses)
+    valid_loss = np.average(valid_losses)
+    avg_train_losses.append(train_loss)
+    avg_valid_losses.append(valid_loss)
+
+    epoch_len = len(str(num_epochs))
+
+    print(f'[{epoch:>{epoch_len}}/{num_epochs:>{epoch_len}}] ' +
+                 f'train_loss: {train_loss:.5f} ' +
+                 f'valid_loss: {valid_loss:.5f}')
+
+    # clear lists to track next epoch
+    train_losses = []
+    valid_losses = []
+
+    # early_stopping needs the validation loss to check if it has decresed,
+    # and if it has, it will make a checkpoint of the current model
+    early_stopping(valid_loss, model)
+
+    if early_stopping.early_stop:
+        print("Early stopping")
+        break
+
 
 # Test the model
+
+test_loss = 0.0
+class_correct = list(0. for i in range(num_classes))
+class_total = list(0. for i in range(num_classes))
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 with torch.no_grad():
-    correct = 0
-    total = 0
     for images, labels in test_loader:
         images = images.to(device)
         labels = labels.to(device)
-        outputs = model(images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
 
-    print('Test Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        test_loss += loss.item() * images.size(0)
+        _, predicted = torch.max(outputs.data, 1)
+        correct = np.squeeze(predicted.eq(labels.data.view_as(predicted)))
+        # calculate test accuracy for each object class
+        for i in range(batch_size):
+            label = labels.data[i]
+            class_correct[label] += correct[i].item()
+            class_total[label] += 1
+
+    test_loss = test_loss / len(test_loader.dataset)
+    print('Test Loss: {:.6f}\n'.format(test_loss))
+
+    for i in range(num_classes):
+        print('Test Accuracy of %5s: %2d%% (%2d/%2d)' % (
+                str(i), 100 * class_correct[i] / class_total[i],
+                np.sum(class_correct[i]), np.sum(class_total[i])))
+
+    print('\nTest Accuracy (Overall): %2d%% (%2d/%2d)' % (
+        100. * np.sum(class_correct) / np.sum(class_total),
+        np.sum(class_correct), np.sum(class_total)))
 
 # Save the model checkpoint
 torch.save(model.state_dict(), 'model.ckpt')
