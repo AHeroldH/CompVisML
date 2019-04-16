@@ -98,8 +98,7 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=20,
-                               verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+early_stopping = EarlyStopping(patience=10, verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
     for images, labels in train_loader:
@@ -156,6 +155,9 @@ class_total = list(0. for i in range(num_classes))
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 with torch.no_grad():
     for images, labels in test_loader:
+        if len(labels.data) != batch_size:
+            break
+
         images = images.to(device)
         labels = labels.to(device)
 
