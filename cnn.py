@@ -135,11 +135,7 @@ for epoch in range(num_epochs):
 
     epoch_len = len(str(num_epochs))
 
-    print_msg = (f'[{epoch:>{epoch_len}}/{num_epochs:>{epoch_len}}] ' +
-                 f'train_loss: {train_loss:.5f} ' +
-                 f'valid_loss: {valid_loss:.5f}')
-
-    print(print_msg)
+    print('[{epoch:>{epoch_len}}/{num_epochs:>{epoch_len}}] train_loss: {train_loss:.5f} valid_loss: {valid_loss:.5f}')
 
     # clear lists to track next epoch
     train_losses = []
