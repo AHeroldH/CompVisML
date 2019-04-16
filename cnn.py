@@ -11,7 +11,7 @@ device = torch.device('cuda:0')
 # Hyper parameters
 num_epochs = 100
 num_classes = 29
-batch_size = 50
+batch_size = 32
 learning_rate = 0.0001
 
 # MNIST dataset
