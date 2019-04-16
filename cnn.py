@@ -22,7 +22,7 @@ test_dataset = torchvision.datasets.ImageFolder(root='OwnTest/',
                                                 transform=transforms.ToTensor())
 
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
-                                                transform=transforms.ToTensor())
+                                                 transform=transforms.ToTensor())
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -34,8 +34,8 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           shuffle=False)
 
 valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
-                                          batch_size=batch_size,
-                                          shuffle=False)
+                                           batch_size=batch_size,
+                                           shuffle=False)
 
 
 # Convolutional neural network (two convolutional layers)
@@ -98,7 +98,8 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=20, verbose=True) #early stopping patience; how long to wait after last time validation loss improved
+early_stopping = EarlyStopping(patience=20,
+                               verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
     for images, labels in train_loader:
@@ -133,9 +134,9 @@ for epoch in range(num_epochs):
     avg_train_losses.append(train_loss)
     avg_valid_losses.append(valid_loss)
 
-    epoch_len = len(str(num_epochs))
-
-    print('[{epoch:>{epoch_len}}/{num_epochs:>{epoch_len}}] train_loss: {train_loss:.5f} valid_loss: {valid_loss:.5f}')
+    print('Epoch [{}/{}] ' +
+          'train_loss: {:.5f} ' +
+          'valid_loss: {:.5f}'.format(epoch, num_epochs, train_loss, valid_loss))
 
     # clear lists to track next epoch
     train_losses = []
@@ -148,7 +149,6 @@ for epoch in range(num_epochs):
     if early_stopping.early_stop:
         print("Early stopping")
         break
-
 
 # Test the model
 
@@ -177,8 +177,8 @@ with torch.no_grad():
 
     for i in range(num_classes):
         print('Test Accuracy of %5s: %2d%% (%2d/%2d)' % (
-                str(i), 100 * class_correct[i] / class_total[i],
-                np.sum(class_correct[i]), np.sum(class_total[i])))
+            str(i), 100 * class_correct[i] / class_total[i],
+            np.sum(class_correct[i]), np.sum(class_total[i])))
 
     print('\nTest Accuracy (Overall): %2d%% (%2d/%2d)' % (
         100. * np.sum(class_correct) / np.sum(class_total),
