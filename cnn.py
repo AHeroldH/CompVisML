@@ -7,10 +7,10 @@ import torchvision.transforms as transforms
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 5
+num_epochs = 12
 num_classes = 29
-batch_size = 100
-learning_rate = 0.001
+batch_size = 50
+learning_rate = 0.0001
 
 # MNIST dataset
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages/',
