@@ -11,10 +11,9 @@ device = torch.device('cuda:0')
 # Hyper parameters
 num_epochs = 100
 num_classes = 29
-batch_size = 32
-learning_rate = 0.0001
+batch_size = 28
+learning_rate = 0.0005
 
-# MNIST dataset
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages/',
                                                  transform=transforms.ToTensor())
 
@@ -43,31 +42,31 @@ class ConvNet(nn.Module):
     def __init__(self, num_classes=29):
         super(ConvNet, self).__init__()
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=5, stride=1, padding=1),
+            nn.Conv2d(3, 16, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=1),
+            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.layer3 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.layer4 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),
+            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.layer5 = nn.Sequential(
-            nn.Conv2d(128, 256, kernel_size=5, stride=1, padding=1),
+            nn.Conv2d(128, 256, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
-        self.fc = nn.Linear(6 * 6 * 256, num_classes)
+        self.fc = nn.Linear(8 * 8 * 256, num_classes)
 
     def forward(self, x):
         out = self.layer1(x)
@@ -84,7 +83,7 @@ model = ConvNet(num_classes).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adamax(model.parameters(), lr=learning_rate)
 
 # Train the model
 
@@ -98,7 +97,7 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=10, verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+early_stopping = EarlyStopping(patience=20, verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
     for images, labels in train_loader:
