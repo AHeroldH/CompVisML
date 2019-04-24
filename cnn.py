@@ -25,10 +25,13 @@ train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
 
-test_dataset = 'Test/TestImages'
-test_data_files = os.listdir(test_dataset)
-im = Image.open('{}/{}'.format(test_dataset, test_data_files[0]))
-plt.imshow(im)
+test_dataset = torchvision.datasets.ImageFolder(root='Test/TestImages',
+                                                transform=transforms.ToTensor())
+
+#test_dataset = 'Test/TestImages'
+#test_data_files = os.listdir(test_dataset)
+#im = Image.open('{}/{}'.format(test_dataset, test_data_files[0]))
+#plt.imshow(im)
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -38,6 +41,10 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
 valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            batch_size=batch_size,
                                            shuffle=False)
+
+test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                          batch_size=batch_size,
+                                          shuffle=False)
 
 
 # Convolutional neural network (two convolutional layers)
@@ -177,58 +184,68 @@ for epoch in range(num_epochs):
 
 # Test the model
 
-def apply_test_transforms(inp):
-    out = transforms.functional.resize(inp, [255, 255])
-    out = transforms.functional.to_tensor(out)
-    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
-    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
-    out = transforms.functional.normalize(out, mean, std)
-    return out
+#def apply_test_transforms(inp):
+#    out = transforms.functional.resize(inp, [255, 255])
+#    out = transforms.functional.to_tensor(out)
+#    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
+#    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
+#    out = transforms.functional.normalize(out, mean, std)
+#    return out
 
 
-def test_data_from_fname(fname):
-    im = Image.open('{}/{}'.format(test_dataset, fname))
-    return apply_test_transforms(im)
+#def test_data_from_fname(fname):
+#    im = Image.open('{}/{}'.format(test_dataset, fname))
+#    return apply_test_transforms(im)
 
 
-def extract_file_id(fname):
+#def extract_file_id(fname):
     #print("Extracting id from " + fname)
-    return int(re.search('\d+', fname).group())
+#    return int(re.search('\d+', fname).group())
 
 
-im_as_tensor = apply_test_transforms(im)
+#im_as_tensor = apply_test_transforms(im)
 #print(im_as_tensor.size())
-minibatch = torch.stack([im_as_tensor])
+#minibatch = torch.stack([im_as_tensor])
 #print(minibatch.size())
 
-model(minibatch)
+#model(minibatch)
 
-model.eval()
-predictions = {extract_file_id(fname): test_data_from_fname(fname)
-               for fname in test_data_files}
+#model.eval()
+#predictions = {extract_file_id(fname): test_data_from_fname(fname)
+#               for fname in test_data_files}
 
-ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
-ds.head()
-df = pd.DataFrame(ds, columns=['label']).sort_index()
-df['id'] = df.index
-df = df[['id', 'label']]
-df.head()
+#ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
+#ds.head()
+#df = pd.DataFrame(ds, columns=['label']).sort_index()
+#df['id'] = df.index
+#df = df[['id', 'label']]
+#df.head()
 
-df.to_csv('submission.csv', index=False)
+#df.to_csv('submission.csv', index=False)
 
 # test_loss = 0.0
 # class_correct = list(0. for i in range(num_classes))
 # class_total = list(0. for i in range(num_classes))
-# model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
-# with torch.no_grad():
-#    for images, labels in test_loader:
-#        if len(labels.data) != batch_size:
-#            break
-#
-#        images = images.to(device)
-#        labels = labels.to(device)
-#
-#        outputs = model(images)
+model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
+with torch.no_grad():
+    for images, labels in test_loader:
+        if len(labels.data) != batch_size:
+            break
+
+        images = images.to(device)
+        labels = labels.to(device)
+
+        outputs = model(images)
+
+ds = pd.Series({id: label for (id, label) in zip(outputs.keys(), outputs.values())})
+ds.head()
+df = pd.DataFrame(ds, columns=['Label']).sort_index()
+df['ID'] = df.index
+df = df[['ID', 'Label']]
+df.head()
+
+df.to_csv('submission.csv', index=False)
+
 #        loss = criterion(outputs, labels)
 #        test_loss += loss.item() * images.size(0)
 #        _, predicted = torch.max(outputs.data, 1)
