@@ -185,7 +185,7 @@ def apply_test_transforms(inp):
 
 
 def test_data_from_fname(fname):
-    im = Image.open(f'{test_dataset}/{fname}')
+    im = Image.open('{}/{}'.format(test_dataset, fname))
     return apply_test_transforms(im)
 
 
