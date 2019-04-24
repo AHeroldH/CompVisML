@@ -180,7 +180,9 @@ for epoch in range(num_epochs):
 def apply_test_transforms(inp):
     out = transforms.functional.resize(inp, [255, 255])
     out = transforms.functional.to_tensor(out)
-    out = transforms.functional.normalize(out, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
+    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
+    out = transforms.functional.normalize(out, mean, std)
     return out
 
 
