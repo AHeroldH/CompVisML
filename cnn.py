@@ -27,7 +27,7 @@ valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImag
 
 test_dataset = 'Test/TestImages'
 test_data_files = os.listdir(test_dataset)
-im = Image.open(f'{test_dataset}/{test_data_files[0]}')
+im = Image.open('{}/{}'.format(test_dataset, test_data_files[0]))
 plt.imshow(im)
 
 # Data loader
