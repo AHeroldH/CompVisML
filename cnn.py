@@ -2,8 +2,13 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from  pytorchtools import EarlyStopping
+from pytorchtools import EarlyStopping
 import numpy as np
+from PIL import Image
+import os
+import matplotlib.pyplot as plt
+import re
+import pandas as pd
 
 # Device configuration
 device = torch.device('cuda:0')
@@ -14,23 +19,21 @@ num_classes = 29
 batch_size = 30
 learning_rate = 0.0005
 
-train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages/',
+train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=transforms.ToTensor())
-
-test_dataset = torchvision.datasets.ImageFolder(root='OwnTest/',
-                                                transform=transforms.ToTensor())
 
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
+
+test_dataset = 'Test/TestImages'
+test_data_files = os.listdir(test_dataset)
+im = Image.open(f'{test_dataset}/{test_data_files[0]}')
+plt.imshow(im)
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size,
                                            shuffle=True)
-
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                          batch_size=batch_size,
-                                          shuffle=False)
 
 valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            batch_size=batch_size,
@@ -71,17 +74,17 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
-        #self.layer7 = nn.Sequential(
+        # self.layer7 = nn.Sequential(
         #    nn.Conv2d(160, 192, kernel_size=8, stride=1, padding=4),
         #    nn.BatchNorm2d(192),
         #    nn.ReLU(),
         #    nn.MaxPool2d(kernel_size=2, stride=2))
-        #self.layer8 = nn.Sequential(
+        # self.layer8 = nn.Sequential(
         #   nn.Conv2d(192, 224, kernel_size=8, stride=1, padding=4),
         #   nn.BatchNorm2d(224),
         #   nn.ReLU(),
         #   nn.MaxPool2d(kernel_size=2, stride=2))
-        #self.layer9 = nn.Sequential(
+        # self.layer9 = nn.Sequential(
         #   nn.Conv2d(224, 256, kernel_size=8, stride=1, padding=4),
         #   nn.BatchNorm2d(256),
         #   nn.ReLU(),
@@ -95,9 +98,9 @@ class ConvNet(nn.Module):
         out = self.layer4(out)
         out = self.layer5(out)
         out = self.layer6(out)
-        #out = self.layer7(out)
-        #out = self.layer8(out)
-        #out = self.layer9(out)
+        # out = self.layer7(out)
+        # out = self.layer8(out)
+        # out = self.layer9(out)
         out = out.reshape(out.size(0), -1)
         out = self.fc(out)
         return out
@@ -121,7 +124,8 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=20, verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+early_stopping = EarlyStopping(patience=20,
+                               verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
     for images, labels in train_loader:
@@ -156,7 +160,7 @@ for epoch in range(num_epochs):
     avg_train_losses.append(train_loss)
     avg_valid_losses.append(valid_loss)
 
-    print('Epoch [{}/{}] train_loss: {:.5f} valid_loss: {:.5f}'.format(epoch+1, num_epochs, train_loss, valid_loss))
+    print('Epoch [{}/{}] train_loss: {:.5f} valid_loss: {:.5f}'.format(epoch + 1, num_epochs, train_loss, valid_loss))
 
     # clear lists to track next epoch
     train_losses = []
@@ -170,42 +174,80 @@ for epoch in range(num_epochs):
         print("Early stopping")
         break
 
+
 # Test the model
 
-test_loss = 0.0
-class_correct = list(0. for i in range(num_classes))
-class_total = list(0. for i in range(num_classes))
-model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
-with torch.no_grad():
-    for images, labels in test_loader:
-        if len(labels.data) != batch_size:
-            break
+def apply_test_transforms(inp):
+    out = transforms.functional.resize(inp, [255, 255])
+    out = transforms.functional.to_tensor(out)
+    out = transforms.functional.normalize(out, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    return out
 
-        images = images.to(device)
-        labels = labels.to(device)
 
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        test_loss += loss.item() * images.size(0)
-        _, predicted = torch.max(outputs.data, 1)
-        correct = np.squeeze(predicted.eq(labels.data.view_as(predicted)))
-        # calculate test accuracy for each object class
-        for i in range(batch_size):
-            label = labels.data[i]
-            class_correct[label] += correct[i].item()
-            class_total[label] += 1
+def test_data_from_fname(fname):
+    im = Image.open(f'{test_dataset}/{fname}')
+    return apply_test_transforms(im)
 
-    test_loss = test_loss / len(test_loader.dataset)
-    print('Test Loss: {:.6f}\n'.format(test_loss))
 
-    for i in range(num_classes):
-        print('Test Accuracy of %5s: %2d%% (%2d/%2d)' % (
-            str(i), 100 * class_correct[i] / class_total[i],
-            np.sum(class_correct[i]), np.sum(class_total[i])))
+def extract_file_id(fname):
+    #print("Extracting id from " + fname)
+    return int(re.search('\d+', fname).group())
 
-    print('\nTest Accuracy (Overall): %2d%% (%2d/%2d)' % (
-        100. * np.sum(class_correct) / np.sum(class_total),
-        np.sum(class_correct), np.sum(class_total)))
+
+im_as_tensor = apply_test_transforms(im)
+#print(im_as_tensor.size())
+minibatch = torch.stack([im_as_tensor])
+#print(minibatch.size())
+
+model(minibatch)
+
+model.eval()
+predictions = {extract_file_id(fname): test_data_from_fname(fname)
+               for fname in test_data_files}
+
+ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
+ds.head()
+df = pd.DataFrame(ds, columns=['label']).sort_index()
+df['id'] = df.index
+df = df[['id', 'label']]
+df.head()
+
+df.to_csv('submission.csv', index=False)
+
+# test_loss = 0.0
+# class_correct = list(0. for i in range(num_classes))
+# class_total = list(0. for i in range(num_classes))
+# model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
+# with torch.no_grad():
+#    for images, labels in test_loader:
+#        if len(labels.data) != batch_size:
+#            break
+#
+#        images = images.to(device)
+#        labels = labels.to(device)
+#
+#        outputs = model(images)
+#        loss = criterion(outputs, labels)
+#        test_loss += loss.item() * images.size(0)
+#        _, predicted = torch.max(outputs.data, 1)
+#        correct = np.squeeze(predicted.eq(labels.data.view_as(predicted)))
+#        # calculate test accuracy for each object class
+#        for i in range(batch_size):
+#            label = labels.data[i]
+#            class_correct[label] += correct[i].item()
+#            class_total[label] += 1
+#
+#    test_loss = test_loss / len(test_loader.dataset)
+#    print('Test Loss: {:.6f}\n'.format(test_loss))
+#
+#    for i in range(num_classes):
+#        print('Test Accuracy of %5s: %2d%% (%2d/%2d)' % (
+#            str(i), 100 * class_correct[i] / class_total[i],
+#            np.sum(class_correct[i]), np.sum(class_total[i])))
+#
+#    print('\nTest Accuracy (Overall): %2d%% (%2d/%2d)' % (
+#        100. * np.sum(class_correct) / np.sum(class_total),
+#       np.sum(class_correct), np.sum(class_total)))
 
 # Save the model checkpoint
 torch.save(model.state_dict(), 'model.ckpt')
