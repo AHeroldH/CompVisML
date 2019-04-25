@@ -16,7 +16,7 @@ device = torch.device('cuda:0')
 # Hyper parameters
 num_epochs = 100
 num_classes = 29
-batch_size = 30
+batch_size = 40
 learning_rate = 0.0005
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -25,7 +25,7 @@ train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
 
-test_dataset = torchvision.datasets.ImageFolder(root='Test/TestImages',
+test_dataset = torchvision.datasets.ImageFolder(root='Test',
                                                 transform=transforms.ToTensor())
 
 #test_dataset = 'Test/TestImages'
@@ -178,8 +178,9 @@ for epoch in range(num_epochs):
     early_stopping(valid_loss, model)
 
     if early_stopping.early_stop:
-        print("Early stopping")
-        break
+	print(output)
+	print("Early stopping")
+	break
 
 
 # Test the model
@@ -228,19 +229,21 @@ for epoch in range(num_epochs):
 # class_total = list(0. for i in range(num_classes))
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 with torch.no_grad():
-    for images, labels in test_loader:
-        if len(labels.data) != batch_size:
-            break
+    for images in test_loader:
+        #if len(labels.data) != batch_size:
+        #    break
 
         images = images.to(device)
-        labels = labels.to(device)
+        #labels = labels.to(device)
 
         outputs = model(images)
 
-ds = pd.Series({id: label for (id, label) in zip(outputs.keys(), outputs.values())})
-ds.head()
-df = pd.DataFrame(ds, columns=['Label']).sort_index()
-df['ID'] = df.index
+#ds = pd.Series({id: label for (id, label) in zip(outputs.keys(), outputs.values())})
+#ds.head()
+print(outputs)
+print(outputs.numpy())
+df = pd.DataFrame([(outputs.cpu()).numpy()], index=['ID'], columns=['Label']).sort_index()
+#df['ID'] = df.index
 df = df[['ID', 'Label']]
 df.head()
 
