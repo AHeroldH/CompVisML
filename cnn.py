@@ -207,7 +207,7 @@ print(im_as_tensor.size())
 minibatch = torch.stack([im_as_tensor])
 print(minibatch.size())
 
-model(minibatch)
+model.cuda(minibatch.to(device))
 
 model.eval()
 predictions = {extract_file_id(fname): test_data_from_fname(fname)
