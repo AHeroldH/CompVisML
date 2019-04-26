@@ -41,7 +41,7 @@ valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            batch_size=batch_size,
                                            shuffle=False)
 
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+test_loader = torch.utils.data.DataLoader(dataset=test_data_files,
                                           batch_size=batch_size,
                                           shuffle=False)
 
@@ -197,7 +197,7 @@ def test_data_from_fname(fname):
 
 
 def extract_file_id(fname):
-    print("Extracting id from " + fname)
+#    print("Extracting id from " + fname)
     return int(re.search('\d+', fname).group())
 #
 #
@@ -243,15 +243,15 @@ with torch.no_grad():
        outputs = model(images)
 
 predictions = {extract_file_id(fname): test_data_from_fname(fname)
-              for i, fname in enumerate(test_loader)}
+              for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
 ds.head()
 #print(outputs)
 #print((outputs.cpu()).tolist())
-df = pd.DataFrame(ds, columns=['ID', 'Label']).sort_index()
-df['ID'] = df.index
-df = df[['ID', 'Label']]
+df = pd.DataFrame(ds, columns=['label']).sort_index()
+df['id'] = df.index
+df = df[['id', 'label']]
 df.head()
 
 df.to_csv('submission.csv', index=False)
