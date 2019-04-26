@@ -232,15 +232,14 @@ test_loss = 0.0
 class_correct = list(0. for i in range(num_classes))
 class_total = list(0. for i in range(num_classes))
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
+
 with torch.no_grad():
-   for images, labels in test_loader:
-       # if len(labels.data) != batch_size:
-       #    break
+   for i, images in enumerate(test_loader):
+       if len(labels.data) != batch_size:
+          break
 
        images = images.to(device)
        # labels = labels.to(device)
-
-       print(images)
 
        outputs = model(images)
 
@@ -248,7 +247,7 @@ with torch.no_grad():
 #ds.head()
 #print(outputs)
 #print((outputs.cpu()).tolist())
-df = pd.DataFrame([(outputs.cpu()).tolist()], columns=['ID', 'Label']).sort_index()
+df = pd.DataFrame(outputs.cpu().detach().numpy(), columns=['ID', 'Label']).sort_index()
 df['ID'] = df.index
 df = df[['ID', 'Label']]
 df.head()
