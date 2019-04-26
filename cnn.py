@@ -156,7 +156,6 @@ for epoch in range(num_epochs):
 
         # forward pass: compute predicted outputs by passing inputs to the model
         output = model(images)
-        print(output)
         # calculate the loss
         loss = criterion(output, labels)
         # record validation loss
@@ -235,8 +234,8 @@ model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-b
 
 with torch.no_grad():
    for i, images in enumerate(test_loader):
-       #if len(labels.data) != batch_size:
-       #   break
+       if len(labels.data) != batch_size:
+          break
 
        images = images.to(device)
        # labels = labels.to(device)
