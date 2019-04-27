@@ -30,7 +30,6 @@ valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImag
 
 test_dataset = 'Test/TestImages'
 test_data_files = os.listdir(test_dataset)
-im = Image.open('{}/{}'.format(test_dataset, test_data_files[0]))
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -183,7 +182,7 @@ for epoch in range(num_epochs):
 # Test the model
 
 def apply_test_transforms(inp):
-   out = transforms.functional.resize(inp, [255, 255])
+   out = transforms.functional.resize(inp, [256, 256])
    out = transforms.functional.to_tensor(out)
    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
@@ -232,18 +231,18 @@ def extract_file_id(fname):
 # class_total = list(0. for i in range(num_classes))
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 
-with torch.no_grad():
-   for i, images in enumerate(test_loader):
-       if len(labels.data) != batch_size:
-          break
-
-       images = images.to(device)
+#with torch.no_grad():
+#   for i, images in enumerate(test_loader):
+#       if len(labels.data) != batch_size:
+#          break
+#
+#       images = images.to(device)
        # labels = labels.to(device)
 
-       outputs = model(images)
+#       outputs = model(images)
 
 predictions = {extract_file_id(fname): test_data_from_fname(fname)
-              for fname in test_data_files}
+              for fname in test_loader}
 
 ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
 ds.head()
