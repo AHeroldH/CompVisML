@@ -11,7 +11,7 @@ import re
 import pandas as pd
 
 # Device configuration
-device = torch.device('cuda:0')
+device = torch.device('cpu')
 
 # Hyper parameters
 num_epochs = 3
@@ -19,16 +19,16 @@ num_classes = 29
 batch_size = 34
 learning_rate = 0.0005
 
-train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
+train_dataset = torchvision.datasets.ImageFolder(root='/Users/herold/PycharmProjects/CompVisML/Train/TrainImages',
                                                  transform=transforms.ToTensor())
 
-valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
+valid_dataset = torchvision.datasets.ImageFolder(root='/Users/herold/PycharmProjects/CompVisML/Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
 
 #test_dataset = torchvision.datasets.ImageFolder(root='Test',
 #                                                transform=transforms.ToTensor())
 
-test_dataset = 'Test/TestImages'
+test_dataset = '/Users/herold/PycharmProjects/CompVisML/Test/TestImages'
 test_data_files = os.listdir(test_dataset)
 im = Image.open(f'{test_dataset}/{test_data_files[0]}')
 
@@ -192,8 +192,13 @@ def apply_test_transforms(inp):
 
 def predict_single_instance(model, tensor):
 #    batch = torch.stack([tensor])
-    preds = model(tensor)
-    return preds
+    outputs = []
+    with torch.no_grad():
+        for images, labels in tensor:
+            output = model(images)
+            outputs.append(output.detach())
+    outputs = torch.cat(outputs)
+    return outputs
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
