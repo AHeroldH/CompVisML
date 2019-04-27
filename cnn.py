@@ -188,7 +188,7 @@ def apply_test_transforms(inp):
    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
    out = transforms.functional.normalize(out, mean, std)
-   return out
+   return out.to(device)
 
 #def predict_single_instance(model, tensor):
 #    batch = torch.stack([tensor])
@@ -248,7 +248,7 @@ model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-b
 #       outputs = model(images)
 
 predictions = {extract_file_id(fname): model(torch.stack([test_data_from_fname(fname)]))
-              for fname in test_loader}
+              for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
 ds.head()
