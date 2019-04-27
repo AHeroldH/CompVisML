@@ -30,6 +30,7 @@ valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImag
 
 test_dataset = 'Test/TestImages'
 test_data_files = os.listdir(test_dataset)
+im = Image.open(f'{test_dataset}/{test_data_files[0]}')
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -189,6 +190,11 @@ def apply_test_transforms(inp):
    out = transforms.functional.normalize(out, mean, std)
    return out
 
+#def predict_single_instance(model, tensor):
+#    batch = torch.stack([tensor])
+#    softMax = nn.Softmax(dim = 1)
+#    preds = softMax(model(batch))
+#    return preds[0,1].item()
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
@@ -200,9 +206,9 @@ def extract_file_id(fname):
     return int(re.search('\d+', fname).group())
 #
 #
-# im_as_tensor = apply_test_transforms(im)
+im_as_tensor = apply_test_transforms(im)
 # print(im_as_tensor.size())
-# minibatch = torch.stack([im_as_tensor])
+minibatch = torch.stack([im_as_tensor])
 # print(minibatch.size())
 #
 # model.cuda()
@@ -211,7 +217,7 @@ def extract_file_id(fname):
 #     x = inp.cuda()
 #     model(x)
 #
-# #model(minibatch)
+model(minibatch)
 #
 # model.eval()
 # predictions = {extract_file_id(fname): test_data_from_fname(fname)
@@ -241,7 +247,7 @@ model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-b
 
 #       outputs = model(images)
 
-predictions = {extract_file_id(fname): test_data_from_fname(fname)
+predictions = {extract_file_id(fname): model(torch.stack([test_data_from_fname(fname)]))
               for fname in test_loader}
 
 ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
