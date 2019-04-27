@@ -190,11 +190,10 @@ def apply_test_transforms(inp):
    out = transforms.functional.normalize(out, mean, std)
    return out.to(device)
 
-#def predict_single_instance(model, tensor):
+def predict_single_instance(model, tensor):
 #    batch = torch.stack([tensor])
-#    softMax = nn.Softmax(dim = 1)
-#    preds = softMax(model(batch))
-#    return preds[0,1].item()
+    preds = model(tensor)
+    return preds
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
@@ -247,7 +246,7 @@ model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-b
 
 #       outputs = model(images)
 
-predictions = {extract_file_id(fname): model(torch.stack([test_data_from_fname(fname)]))
+predictions = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
               for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
