@@ -11,7 +11,7 @@ import re
 import pandas as pd
 
 # Device configuration
-device = torch.device('cpu')
+device = torch.device('cuda:0')
 
 # Hyper parameters
 num_epochs = 3
@@ -19,16 +19,16 @@ num_classes = 29
 batch_size = 34
 learning_rate = 0.0005
 
-train_dataset = torchvision.datasets.ImageFolder(root='/Users/herold/PycharmProjects/CompVisML/Train/TrainImages',
+train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=transforms.ToTensor())
 
-valid_dataset = torchvision.datasets.ImageFolder(root='/Users/herold/PycharmProjects/CompVisML/Validation/ValidationImages',
+valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
 
 #test_dataset = torchvision.datasets.ImageFolder(root='Test',
 #                                                transform=transforms.ToTensor())
 
-test_dataset = '/Users/herold/PycharmProjects/CompVisML/Test/TestImages'
+test_dataset = 'Test/TestImages'
 test_data_files = os.listdir(test_dataset)
 im = Image.open(f'{test_dataset}/{test_data_files[0]}')
 
@@ -183,7 +183,7 @@ for epoch in range(num_epochs):
 # Test the model
 
 def apply_test_transforms(inp):
-   out = transforms.functional.resize(inp, [256, 256])
+   out = transforms.functional.resize(inp, [224, 224])
    out = transforms.functional.to_tensor(out)
    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
@@ -191,14 +191,15 @@ def apply_test_transforms(inp):
    return out.to(device)
 
 def predict_single_instance(model, tensor):
-#    batch = torch.stack([tensor])
-    outputs = []
-    with torch.no_grad():
-        for images, labels in tensor:
-            output = model(images)
-            outputs.append(output.detach())
-    outputs = torch.cat(outputs)
-    return outputs
+    batch = torch.stack([tensor])
+    #outputs = []
+    #with torch.no_grad():
+    #    for i, images in enumerate(tensor):
+    #        output = model(images)
+    #        outputs.append(output.detach())
+    #outputs = torch.cat(outputs)
+    preds = model(tensor.unsqueeze(0))
+    return preds[0,1].item()
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
@@ -211,9 +212,9 @@ def extract_file_id(fname):
 #
 #
 im_as_tensor = apply_test_transforms(im)
-# print(im_as_tensor.size())
+#print(im_as_tensor.size())
 minibatch = torch.stack([im_as_tensor])
-# print(minibatch.size())
+#print(minibatch.size())
 #
 # model.cuda()
 #
