@@ -14,10 +14,10 @@ import pandas as pd
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 3
+num_epochs = 100
 num_classes = 29
-batch_size = 34
-learning_rate = 0.0005
+batch_size = 22
+learning_rate = 0.00025
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=transforms.ToTensor())
@@ -130,7 +130,7 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=2,
+early_stopping = EarlyStopping(patience=30,
                                verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
@@ -198,8 +198,9 @@ def predict_single_instance(model, tensor):
     #        output = model(images)
     #        outputs.append(output.detach())
     #outputs = torch.cat(outputs)
-    preds = model(tensor.unsqueeze(0))
-    return preds[0,1].item()
+    preds = model(batch)
+    _, predictions = torch.max(preds, 1)
+    return predictions.item()
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
