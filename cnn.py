@@ -15,7 +15,7 @@ device = torch.device('cuda:0')
 # Hyper parameters
 num_epochs = 100
 num_classes = 29
-batch_size = 32
+batch_size = 30
 learning_rate = 0.00075
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -164,7 +164,8 @@ def apply_test_transforms(inp):
 
 def predict_single_instance(model, tensor):
     batch = torch.stack([tensor])
-    preds = model(batch)
+    softMax = nn.Softmax(dim = 1)
+    preds = softMax(model(batch))
     _, predictions = torch.max(preds, 1)
     return predictions.item() + 1
 
