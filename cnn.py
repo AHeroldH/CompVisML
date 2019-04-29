@@ -16,8 +16,8 @@ device = torch.device('cuda:0')
 # Hyper parameters
 num_epochs = 100
 num_classes = 29
-batch_size = 22
-learning_rate = 0.00025
+batch_size = 32
+learning_rate = 0.00075
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=transforms.ToTensor())
@@ -130,7 +130,7 @@ avg_train_losses = []
 avg_valid_losses = []
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=30,
+early_stopping = EarlyStopping(patience=20,
                                verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 for epoch in range(num_epochs):
     model.train()
@@ -183,11 +183,11 @@ for epoch in range(num_epochs):
 # Test the model
 
 def apply_test_transforms(inp):
-   out = transforms.functional.resize(inp, [224, 224])
-   out = transforms.functional.to_tensor(out)
-   mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
-   std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
-   out = transforms.functional.normalize(out, mean, std)
+   #out = transforms.functional.resize(inp, [224, 224])
+   out = transforms.functional.to_tensor(inp)
+   #mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
+   #std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32, device=device)
+   #out = transforms.functional.normalize(out, mean, std)
    return out.to(device)
 
 def predict_single_instance(model, tensor):
@@ -200,7 +200,7 @@ def predict_single_instance(model, tensor):
     #outputs = torch.cat(outputs)
     preds = model(batch)
     _, predictions = torch.max(preds, 1)
-    return predictions.item()
+    return predictions.item()+1
 
 def test_data_from_fname(fname):
    im = Image.open('{}/{}'.format(test_dataset, fname))
@@ -212,9 +212,9 @@ def extract_file_id(fname):
     return int(re.search('\d+', fname).group())
 #
 #
-im_as_tensor = apply_test_transforms(im)
+#im_as_tensor = apply_test_transforms(im)
 #print(im_as_tensor.size())
-minibatch = torch.stack([im_as_tensor])
+#minibatch = torch.stack([im_as_tensor])
 #print(minibatch.size())
 #
 # model.cuda()
@@ -223,7 +223,8 @@ minibatch = torch.stack([im_as_tensor])
 #     x = inp.cuda()
 #     model(x)
 #
-model(minibatch)
+#minibatch_tensor = model(minibatch)
+#print(minibatch_tensor)
 #
 # model.eval()
 # predictions = {extract_file_id(fname): test_data_from_fname(fname)
@@ -253,16 +254,16 @@ model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-b
 
 #       outputs = model(images)
 
-predictions = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
+predicts = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
               for fname in test_data_files}
 
-ds = pd.Series({id: label for (id, label) in zip(predictions.keys(), predictions.values())})
+ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 ds.head()
 #print(outputs)
 #print((outputs.cpu()).tolist())
-df = pd.DataFrame(ds, columns=['label']).sort_index()
-df['id'] = df.index
-df = df[['id', 'label']]
+df = pd.DataFrame(ds, columns=['Label']).sort_index()
+df['ID'] = df.index
+df = df[['ID', 'Label']]
 df.head()
 
 df.to_csv('submission.csv', index=False)
