@@ -97,8 +97,10 @@ train_losses = []
 valid_losses = []
 avg_train_losses = []
 avg_valid_losses = []
-running_loss = 0.0
-running_corrects = 0
+train_running_loss = 0.0
+train_running_corrects = 0
+valid_running_loss = 0.0
+valid_running_corrects = 0
 
 total_step = len(train_loader)
 early_stopping = EarlyStopping(patience=20,
@@ -123,8 +125,8 @@ for epoch in range(num_epochs):
 
         _, preds = torch.max(outputs, 1)
 
-        running_loss += loss.item() * images.size(0)
-        running_corrects += torch.sum(preds == labels.data)
+        train_running_loss += loss.item() * images.size(0)
+        train_running_corrects += torch.sum(preds == labels.data)
 
     model.eval()
     for images, labels in valid_loader:
@@ -137,16 +139,21 @@ for epoch in range(num_epochs):
         loss = criterion(output, labels)
         # Record validation loss
         valid_losses.append(loss.item())
+        
+        _, preds = torch.max(output, 1)
+        
+        valid_running_loss += loss.item() * images.size(0)
+        valid_running_corrects += torch.sum(preds == labels.data)
 
     train_loss = np.average(train_losses)
     valid_loss = np.average(valid_losses)
     avg_train_losses.append(train_loss)
     avg_valid_losses.append(valid_loss)
 
-    valid_epoch_loss = running_loss / 2298
-    valid_epoch_acc = running_corrects.double() / 2298
-    train_epoch_loss = running_loss / 5380
-    train_epoch_acc = running_corrects.double() / 5380
+    valid_epoch_loss = valid_running_loss / 2298
+    valid_epoch_acc = valid_running_corrects.double() / 2298
+    train_epoch_loss = train_running_loss / 5380
+    train_epoch_acc = train_running_corrects.double() / 5380
 
     print('Train Loss: {:.4f} Acc: {:.4f}'.format(
         train_epoch_loss, train_epoch_acc))
