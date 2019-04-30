@@ -8,6 +8,10 @@ from PIL import Image
 import os
 import re
 import pandas as pd
+import torch.optim as optim
+from torch.optim import lr_scheduler
+import time
+import copy
 
 # Device configuration
 device = torch.device('cuda:0')
@@ -16,7 +20,7 @@ device = torch.device('cuda:0')
 num_epochs = 100
 num_classes = 29
 batch_size = 32
-learning_rate = 0.00075
+learning_rate = 0.001
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=transforms.ToTensor())
@@ -38,7 +42,7 @@ valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            shuffle=False)
 
 
-class ConvNet(nn.Module):
+'''class ConvNet(nn.Module):
     def __init__(self, num_classes=29):
         super(ConvNet, self).__init__()
         self.layer1 = nn.Sequential(
@@ -90,90 +94,117 @@ model = ConvNet(num_classes).to(device)
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adamax(model.parameters(), lr=learning_rate)
+'''
+
+model_conv = torchvision.models.resnet18(pretrained=True)
+for param in model_conv.parameters():
+    param.requires_grad = False
+
+# Parameters of newly constructed modules have requires_grad=True by default
+num_ftrs = model_conv.fc.in_features
+model_conv.fc = nn.Linear(num_ftrs, num_classes)
+
+model_conv = model_conv.to(device)
+
+criterion = nn.CrossEntropyLoss()
+
+# Observe that only parameters of final layer are being optimized as
+# opposed to before.
+optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=learning_rate, momentum=0.9)
+
+# Decay LR by a factor of 0.1 every 7 epochs
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+
 
 # Train the model
 
-train_losses = []
-valid_losses = []
-avg_train_losses = []
-avg_valid_losses = []
-train_running_loss = 0.0
-train_running_corrects = 0
-valid_running_loss = 0.0
-valid_running_corrects = 0
+since = time.time()
 
-total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=20,
-                               verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+best_model_wts = copy.deepcopy(model_conv.state_dict())
+best_acc = 0.0
+
+#early_stopping = EarlyStopping(patience=20,
+ #                              verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 
 for epoch in range(num_epochs):
-    model.train()
+    print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+    print('-' * 10)
+
+    exp_lr_scheduler.step()
+    model_conv.train()
+
+    running_loss = 0.0
+    running_corrects = 0
+
+
     for images, labels in train_loader:
         images = images.to(device)
         labels = labels.to(device)
 
-        # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
+        optimizer_conv.zero_grad()
 
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        with torch.set_grad_enabled(True):
+            outputs = model_conv(images)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
 
-        train_losses.append(loss.item())
+            # backward + optimize only if in training phase
+            loss.backward()
+            optimizer_conv.step()
 
-        _, preds = torch.max(outputs, 1)
+        running_loss += loss.item() * images.size(0)
+        running_corrects += torch.sum(preds == labels.data)
 
-        train_running_loss += loss.item() * images.size(0)
-        train_running_corrects += torch.sum(preds == labels.data)
+    epoch_loss = running_loss / 5380
+    epoch_acc = running_corrects.double() / 5380
 
-    model.eval()
+    print('Test Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
+
+    model_conv.eval()
+
     for images, labels in valid_loader:
         images = images.to(device)
         labels = labels.to(device)
 
-        # Forward pass
-        output = model(images)
-        # Calculate the loss
-        loss = criterion(output, labels)
-        # Record validation loss
-        valid_losses.append(loss.item())
+        running_loss = 0.0
+        running_corrects = 0
 
-        _, preds = torch.max(output, 1)
+        optimizer_conv.zero_grad()
 
-        valid_running_loss += loss.item() * images.size(0)
-        valid_running_corrects += torch.sum(preds == labels.data)
+        with torch.set_grad_enabled(False):
+            outputs = model_conv(images)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
 
-    train_loss = np.average(train_losses)
-    valid_loss = np.average(valid_losses)
-    avg_train_losses.append(train_loss)
-    avg_valid_losses.append(valid_loss)
+        running_loss += loss.item() * images.size(0)
+        running_corrects += torch.sum(preds == labels.data)
 
-    valid_epoch_loss = valid_running_loss / 2298
-    valid_epoch_acc = valid_running_corrects.double() / 2298
-    train_epoch_loss = train_running_loss / 5380
-    train_epoch_acc = train_running_corrects.double() / 5380
+    epoch_loss = running_loss / 2298
+    epoch_acc = running_corrects.double() / 2298
 
-    print('Train Loss: {:.4f} Acc: {:.4f}'.format(
-        train_epoch_loss, train_epoch_acc))
+    print('Valid Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 
-    print('Valid Loss: {:.4f} Acc: {:.4f}'.format(
-        valid_epoch_loss, valid_epoch_acc))
+    if epoch_acc > best_acc:
+        best_acc = epoch_acc
+        best_model_wts = copy.deepcopy(model_conv.state_dict())
 
-    print('Epoch [{}/{}] train_loss: {:.5f} valid_loss: {:.5f}'.format(epoch + 1, num_epochs, train_loss, valid_loss))
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(
+        time_elapsed // 60, time_elapsed % 60))
+    print('Best val Acc: {:4f}'.format(best_acc))
+
 
     # clear lists to track next epoch
-    train_losses = []
-    valid_losses = []
+    #train_losses = []
+    #valid_losses = []
 
     # early_stopping needs the validation loss to check if it has decreased,
     # and if it has, it will make a checkpoint of the current model
-    early_stopping(valid_loss, model)
+    #early_stopping(valid_loss, model_conv)
 
-    if early_stopping.early_stop:
-        print("Early stopping")
-        break
+    #if early_stopping.early_stop:
+    #    print("Early stopping")
+    #    break
 
 
 # Test the model
@@ -203,9 +234,9 @@ def extract_file_id(fname):
     return int(re.search('\d+', fname).group())
 
 
-model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
+model_conv.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 
-predicts = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
+predicts = {extract_file_id(fname): predict_single_instance(model_conv, test_data_from_fname(fname))
             for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
@@ -216,4 +247,4 @@ df = df[['ID', 'Label']]
 df.to_csv('submission.csv', index=False)
 
 # Save the model checkpoint
-torch.save(model.state_dict(), 'model.ckpt')
+torch.save(model_conv.state_dict(), 'model.ckpt')
