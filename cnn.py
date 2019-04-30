@@ -13,9 +13,9 @@ import pandas as pd
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 1
+num_epochs = 100
 num_classes = 29
-batch_size = 26
+batch_size = 32
 learning_rate = 0.00075
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -97,6 +97,8 @@ train_losses = []
 valid_losses = []
 avg_train_losses = []
 avg_valid_losses = []
+running_loss = 0.0
+running_corrects = 0
 
 total_step = len(train_loader)
 early_stopping = EarlyStopping(patience=20,
@@ -119,6 +121,11 @@ for epoch in range(num_epochs):
 
         train_losses.append(loss.item())
 
+        _, preds = torch.max(outputs, 1)
+
+        running_loss += loss.item() * images.size(0)
+        running_corrects += torch.sum(preds == labels.data)
+
     model.eval()
     for images, labels in valid_loader:
         images = images.to(device)
@@ -135,6 +142,17 @@ for epoch in range(num_epochs):
     valid_loss = np.average(valid_losses)
     avg_train_losses.append(train_loss)
     avg_valid_losses.append(valid_loss)
+
+    valid_epoch_loss = running_loss / 2298
+    valid_epoch_acc = running_corrects.double() / 2298
+    train_epoch_loss = running_loss / 5380
+    train_epoch_acc = running_corrects.double() / 5380
+
+    print('Train Loss: {:.4f} Acc: {:.4f}'.format(
+        train_epoch_loss, train_epoch_acc))
+
+    print('Valid Loss: {:.4f} Acc: {:.4f}'.format(
+        valid_epoch_loss, valid_epoch_acc))
 
     print('Epoch [{}/{}] train_loss: {:.5f} valid_loss: {:.5f}'.format(epoch + 1, num_epochs, train_loss, valid_loss))
 
@@ -163,9 +181,7 @@ def apply_test_transforms(inp):
 
 
 def predict_single_instance(model, tensor):
-    print(tensor)
     batch = torch.stack([tensor])
-    print(batch)
     preds = model(batch)
     _, predictions = torch.max(preds, 1)
     return predictions.item() + 1
@@ -183,7 +199,7 @@ def extract_file_id(fname):
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 
 predicts = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
-    	   for fname in test_data_files}
+            for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 df = pd.DataFrame(ds, columns=['Label']).sort_index()
