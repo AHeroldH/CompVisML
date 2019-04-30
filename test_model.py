@@ -53,11 +53,14 @@ class ConvNet(nn.Module):
 
 device = torch.device("cuda:0")
 model = ConvNet(29)
-model.load_state_dict(torch.load(model.ckpt))
+model.load_state_dict(torch.load('model.ckpt'))
 model.to(device)
 
-im = Image.open('Validation/ValidationImages/9/771')
+im = Image.open('Validation/ValidationImages/6/Image488.jpg')
 im = transforms.functional.to_tensor(im).to(device)
 im = torch.stack([im])
 
-model(im)
+preds = model(im)
+_, predictions = torch.max(preds, 1)
+
+print("Label: ", str(predictions.item()))

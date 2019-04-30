@@ -139,9 +139,9 @@ for epoch in range(num_epochs):
         loss = criterion(output, labels)
         # Record validation loss
         valid_losses.append(loss.item())
-        
+
         _, preds = torch.max(output, 1)
-        
+
         valid_running_loss += loss.item() * images.size(0)
         valid_running_corrects += torch.sum(preds == labels.data)
 
