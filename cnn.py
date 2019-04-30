@@ -13,9 +13,9 @@ import pandas as pd
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 100
+num_epochs = 1
 num_classes = 29
-batch_size = 30
+batch_size = 26
 learning_rate = 0.00075
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -163,9 +163,10 @@ def apply_test_transforms(inp):
 
 
 def predict_single_instance(model, tensor):
+    print(tensor)
     batch = torch.stack([tensor])
-    softMax = nn.Softmax(dim = 1)
-    preds = softMax(model(batch))
+    print(batch)
+    preds = model(batch)
     _, predictions = torch.max(preds, 1)
     return predictions.item() + 1
 
@@ -182,7 +183,7 @@ def extract_file_id(fname):
 model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 
 predicts = {extract_file_id(fname): predict_single_instance(model, test_data_from_fname(fname))
-            for fname in test_data_files}
+    	   for fname in test_data_files}
 
 ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 df = pd.DataFrame(ds, columns=['Label']).sort_index()
