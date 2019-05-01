@@ -17,9 +17,9 @@ import copy
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 100
+num_epochs = 25
 num_classes = 29
-batch_size = 32
+batch_size = 90
 learning_rate = 0.001
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -96,13 +96,13 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adamax(model.parameters(), lr=learning_rate)
 '''
 
-model_conv = torchvision.models.resnet18(pretrained=True)
+model_conv = torchvision.models.densenet201(pretrained=True)
 for param in model_conv.parameters():
     param.requires_grad = False
 
 # Parameters of newly constructed modules have requires_grad=True by default
-num_ftrs = model_conv.fc.in_features
-model_conv.fc = nn.Linear(num_ftrs, num_classes)
+num_ftrs = model_conv.classifier.in_features
+model_conv.classifier = nn.Linear(num_ftrs, num_classes)
 
 model_conv = model_conv.to(device)
 
@@ -110,7 +110,7 @@ criterion = nn.CrossEntropyLoss()
 
 # Observe that only parameters of final layer are being optimized as
 # opposed to before.
-optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=learning_rate, momentum=0.9)
+optimizer_conv = optim.SGD(model_conv.classifier.parameters(), lr=learning_rate, momentum=0.9)
 
 # Decay LR by a factor of 0.1 every 7 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
@@ -162,12 +162,12 @@ for epoch in range(num_epochs):
 
     model_conv.eval()
 
+    running_loss = 0.0
+    running_corrects = 0
+
     for images, labels in valid_loader:
         images = images.to(device)
         labels = labels.to(device)
-
-        running_loss = 0.0
-        running_corrects = 0
 
         optimizer_conv.zero_grad()
 
@@ -188,10 +188,9 @@ for epoch in range(num_epochs):
         best_acc = epoch_acc
         best_model_wts = copy.deepcopy(model_conv.state_dict())
 
-    time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(
-        time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+time_elapsed = time.time() - since
+print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+print('Best val Acc: {:4f}'.format(best_acc))
 
 
     # clear lists to track next epoch
