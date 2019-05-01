@@ -359,4 +359,4 @@ df = df[['ID', 'Label']]
 df.to_csv('submission.csv', index=False)'''
 
 # Save the model checkpoint
-torch.save(model_conv.state_dict(), 'model.pt')
+torch.save(model_conv.state_dict(), 'model.ckpt')
