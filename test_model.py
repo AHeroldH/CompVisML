@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from PIL import Image
 import torchvision.transforms as transforms
+import torchvision
 
 
 class ConvNet(nn.Module):
@@ -52,7 +53,7 @@ class ConvNet(nn.Module):
 
 
 device = torch.device("cuda:0")
-model = ConvNet(29)
+model = torchvision.models.densenet201(pretrained=True)
 model.load_state_dict(torch.load('model.ckpt'))
 model.to(device)
 
