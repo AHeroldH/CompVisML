@@ -18,23 +18,21 @@ import csv
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 25
+num_epochs = 100
 num_classes = 29
 batch_size = 70
-learning_rate = 0.001
+learning_rate = 0.00075
 
 train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.ToTensor()
     ])
 
 valid_transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.ToTensor()
     ])
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -139,7 +137,7 @@ test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(),
                                           batch_size=1,
                                           shuffle=False)
 
-'''class ConvNet(nn.Module):
+class ConvNet(nn.Module):
     def __init__(self, num_classes=29):
         super(ConvNet, self).__init__()
         self.layer1 = nn.Sequential(
@@ -186,13 +184,13 @@ test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(),
         return out
 
 
-model = ConvNet(num_classes).to(device)
+model_conv = ConvNet(num_classes).to(device)
 
 # Loss and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adamax(model.parameters(), lr=learning_rate)
-'''
+optimizer_conv = torch.optim.Adamax(model_conv.parameters(), lr=learning_rate)
 
+'''
 model_conv = torchvision.models.densenet161(pretrained=True)
 for param in model_conv.parameters():
     param.requires_grad = False
@@ -211,7 +209,7 @@ optimizer_conv = optim.SGD(model_conv.classifier.parameters(), lr=learning_rate,
 
 # Decay LR by a factor of 0.1 every 7 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
-
+'''
 # Train the model
 
 since = time.time()
@@ -219,14 +217,15 @@ since = time.time()
 best_model_wts = copy.deepcopy(model_conv.state_dict())
 best_acc = 0.0
 
-# early_stopping = EarlyStopping(patience=20,
-#                              verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+total_step = len(train_loader)
+early_stopping = EarlyStopping(patience=20,
+                             verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 
 for epoch in range(num_epochs):
     print('Epoch {}/{}'.format(epoch, num_epochs - 1))
     print('-' * 10)
 
-    exp_lr_scheduler.step()
+    #exp_lr_scheduler.step()
     model_conv.train()
 
     running_loss = 0.0
@@ -281,7 +280,13 @@ for epoch in range(num_epochs):
 
     if epoch_acc > best_acc:
         best_acc = epoch_acc
-        best_model_wts = copy.deepcopy(model_conv.state_dict())
+        #best_model_wts = copy.deepcopy(model_conv.state_dict())
+
+    early_stopping(epoch_loss, model_conv)
+
+    if early_stopping.early_stop:
+        print("Early stopping")
+        break
 
 time_elapsed = time.time() - since
 print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
