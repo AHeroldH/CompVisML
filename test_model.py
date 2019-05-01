@@ -3,73 +3,53 @@ import torch.nn as nn
 from PIL import Image
 import torchvision.transforms as transforms
 import torchvision
-
-
-class ConvNet(nn.Module):
-    def __init__(self, num_classes=29):
-        super(ConvNet, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer4 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer5 = nn.Sequential(
-            nn.Conv2d(128, 192, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(192),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer6 = nn.Sequential(
-            nn.Conv2d(192, 256, kernel_size=4, stride=1, padding=2),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.fc = nn.Linear(4 * 4 * 256, num_classes)
-
-    def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
-        out = self.layer5(out)
-        out = self.layer6(out)
-        out = out.reshape(out.size(0), -1)
-        out = self.fc(out)
-        return out
-
+import torch.optim as optim
 
 device = torch.device("cuda:0")
-
-#model_ft = torchvision.models.densenet201(pretrained=True)
-#model_ft.classifier = torch.nn.Linear(model_ft.classifier.in_features, 29)
-#pretrained_dic = model_ft.state_dict()
-#model_dic = model_ft.load_state_dict(torch.load('model.ckpt'))
-
-#pretrained_dic = {k: v for k, v in pretrained_dic.items() if k in model_dic}
-#model_dic.update(pretrained_dic)
-#model_ft.load_state_dict(pretrained_dict)
-#model_ft.load_state_dict(checkpoint['model'].state_dict())
-
-
 model = torchvision.models.densenet201(pretrained=True)
 num_ftrs = model.classifier.in_features
 model.classifier = nn.Linear(num_ftrs, 29)
 model.load_state_dict(torch.load('model.ckpt'))
 model.to(device)
+
+# Hyper parameters
+num_epochs = 1
+num_classes = 29
+batch_size = 90
+learning_rate = 0.001
+
+valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
+                                                 transform=transforms.ToTensor())
+
+valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
+                                           batch_size=batch_size,
+                                           shuffle=False)
+
+criterion = nn.CrossEntropyLoss()
+optimizer_conv = optim.SGD(model.classifier.parameters(), lr=learning_rate, momentum=0.9)
+
+running_loss = 0.0
+running_corrects = 0
+
+with torch.no_grad:
+    for images, labels in valid_loader:
+        images = images.to(device)
+        labels = labels.to(device)
+
+        optimizer_conv.zero_grad()
+
+        with torch.set_grad_enabled(False):
+            outputs = model(images)
+            _, preds = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
+
+    running_loss += loss.item() * images.size(0)
+    running_corrects += torch.sum(preds == labels.data)
+
+epoch_loss = running_loss / 2298
+epoch_acc = running_corrects.double() / 2298
+
+print('Valid Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
 
 im = Image.open('Validation/ValidationImages/1/Image5.jpg')
 im = transforms.functional.to_tensor(im).to(device)
