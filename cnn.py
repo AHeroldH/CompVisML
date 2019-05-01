@@ -316,9 +316,8 @@ model_conv.eval()  # eval mode (batchnorm uses moving mean/variance instead of m
 row = ['ID', 'Label']
 
 with open("submission.csv", "w") as submission_csv:
-    reader = csv.reader(submission_csv)
-    lines = list(reader)
-    lines[2] = row
+    writer = csv.writer(submission_csv)
+    writer.writerow(row)
 
 for ids, images in test_loader:
     images = images.to(device)
@@ -333,10 +332,10 @@ for ids, images in test_loader:
     row = [ids, preds.item()+1]
 
     with open("submission.csv", "w") as submission_csv:
-        reader = csv.reader(submission_csv)
-        lines = list(reader)
-        lines[2] = row
+        writer = csv.writer(submission_csv)
+        writer.writerow(row)
 
+submission_csv.close()
 
 '''ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 df = pd.DataFrame(ds, columns=['Label']).sort_index()
