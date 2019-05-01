@@ -12,6 +12,7 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 import time
 import copy
+import csv
 
 # Device configuration
 device = torch.device('cuda:0')
@@ -28,9 +29,83 @@ train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
                                                  transform=transforms.ToTensor())
 
-test_dataset = 'Test/TestImages'
-test_data_files = os.listdir(test_dataset)
-im = Image.open(f'{test_dataset}/{test_data_files[0]}')
+# test_dataset = 'Test/TestImages'
+# test_data_files = os.listdir(test_dataset)
+# im = Image.open(f'{test_dataset}/{test_data_files[0]}')
+
+dataset = 'Test/TestImages'
+
+
+def make_dataset(dir):
+    images = []
+    ids = []
+    dir = os.path.expanduser(dir)
+    for root, _, fnames in sorted(os.walk(dir)):
+        for fname in sorted(fnames):
+            path = os.path.join(root, fname)
+            images.append(path)
+            id = int(re.search('\d+', fname).group())
+            ids.append(id)
+
+    return ids, images
+
+
+def loader(path):
+    with open(path, 'rb') as f:
+        img = Image.open(f)
+        return img.convert('RGB')
+
+
+class DatasetFolder:
+    """A generic data loader where the samples are arranged in this way: ::
+        root/class_x/xxx.ext
+        root/class_x/xxy.ext
+        root/class_x/xxz.ext
+        root/class_y/123.ext
+        root/class_y/nsdf3.ext
+        root/class_y/asd932_.ext
+    Args:
+        root (string): Root directory path.
+        loader (callable): A function to load a sample given its path.
+        extensions (tuple[string]): A list of allowed extensions.
+            both extensions and is_valid_file should not be passed.
+        transform (callable, optional): A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform (callable, optional): A function/transform that takes
+            in the target and transforms it.
+        is_valid_file (callable, optional): A function that takes path of an Image file
+            and check if the file is a valid_file (used to check of corrupt files)
+            both extensions and is_valid_file should not be passed.
+     Attributes:
+        classes (list): List of the class names.
+        class_to_idx (dict): Dict with items (class_name, class_index).
+        samples (list): List of (sample path, class_index) tuples
+        targets (list): The class_index value for each image in the dataset
+    """
+
+    def __init__(self):
+        super(DatasetFolder, self).__init__()
+        samples = make_dataset(dataset)
+
+        self.samples = samples
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        id, path = self.samples[index]
+        sample = loader(path)
+        sample = transforms.functional.to_tensor(sample)
+
+        return sample
+
+    def __len__(self):
+        return len(self.samples)
+
 
 # Data loader
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
@@ -41,6 +116,9 @@ valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            batch_size=batch_size,
                                            shuffle=False)
 
+test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(),
+                                          batch_size=1,
+                                          shuffle=False)
 
 '''class ConvNet(nn.Module):
     def __init__(self, num_classes=29):
@@ -115,7 +193,6 @@ optimizer_conv = optim.SGD(model_conv.classifier.parameters(), lr=learning_rate,
 # Decay LR by a factor of 0.1 every 7 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
-
 # Train the model
 
 since = time.time()
@@ -123,8 +200,8 @@ since = time.time()
 best_model_wts = copy.deepcopy(model_conv.state_dict())
 best_acc = 0.0
 
-#early_stopping = EarlyStopping(patience=20,
- #                              verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+# early_stopping = EarlyStopping(patience=20,
+#                              verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 
 for epoch in range(num_epochs):
     print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -135,7 +212,6 @@ for epoch in range(num_epochs):
 
     running_loss = 0.0
     running_corrects = 0
-
 
     for images, labels in train_loader:
         images = images.to(device)
@@ -192,23 +268,22 @@ time_elapsed = time.time() - since
 print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 print('Best val Acc: {:4f}'.format(best_acc))
 
+# clear lists to track next epoch
+# train_losses = []
+# valid_losses = []
 
-    # clear lists to track next epoch
-    #train_losses = []
-    #valid_losses = []
+# early_stopping needs the validation loss to check if it has decreased,
+# and if it has, it will make a checkpoint of the current model
+# early_stopping(valid_loss, model_conv)
 
-    # early_stopping needs the validation loss to check if it has decreased,
-    # and if it has, it will make a checkpoint of the current model
-    #early_stopping(valid_loss, model_conv)
-
-    #if early_stopping.early_stop:
-    #    print("Early stopping")
-    #    break
+# if early_stopping.early_stop:
+#    print("Early stopping")
+#    break
 
 
 # Test the model
 
-def apply_test_transforms(inp):
+'''def apply_test_transforms(inp):
     # out = transforms.functional.resize(inp, [224, 224])
     out = transforms.functional.to_tensor(inp)
     # mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32, device=device)
@@ -232,19 +307,43 @@ def test_data_from_fname(fname):
 
 def extract_file_id(fname):
     return int(re.search('\d+', fname).group())
-
+    
+predicts = {extract_file_id(fname): predict_single_instance(model_conv, test_data_from_fname(fname))
+            for fname in test_data_files}'''
 
 model_conv.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
 
-predicts = {extract_file_id(fname): predict_single_instance(model_conv, test_data_from_fname(fname))
-            for fname in test_data_files}
+row = ['ID', 'Label']
 
-ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
+with open("submission.csv", "w") as submission_csv:
+    reader = csv.reader(submission_csv)
+    lines = list(reader)
+    lines[2] = row
+
+for ids, images in test_loader:
+    images = images.to(device)
+    ids = ids.to(device)
+
+    optimizer_conv.zero_grad()
+
+    with torch.set_grad_enabled(False):
+        outputs = model_conv(images)
+        _, preds = torch.max(outputs, 1)
+
+    row = [ids, preds.item()+1]
+
+    with open("submission.csv", "w") as submission_csv:
+        reader = csv.reader(submission_csv)
+        lines = list(reader)
+        lines[2] = row
+
+
+'''ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 df = pd.DataFrame(ds, columns=['Label']).sort_index()
 df['ID'] = df.index
 df = df[['ID', 'Label']]
 
-df.to_csv('submission.csv', index=False)
+df.to_csv('submission.csv', index=False)'''
 
 # Save the model checkpoint
 torch.save(model_conv.state_dict(), 'model.pt')
