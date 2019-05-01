@@ -28,25 +28,23 @@ valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
 criterion = nn.CrossEntropyLoss()
 optimizer_conv = optim.SGD(model.classifier.parameters(), lr=learning_rate, momentum=0.9)
 
+model.eval()
+
 running_loss = 0.0
 running_corrects = 0
-def test():
-   with torch.no_grad:
-	for images, labels in valid_loader:
-   	    images = images.to(device)
-            labels = labels.to(device)
+for images, labels in valid_loader:
+    images = images.to(device)
+    labels = labels.to(device)
 
-            optimizer_conv.zero_grad()
+    optimizer_conv.zero_grad()
 
-            with torch.set_grad_enabled(False):
-                outputs = model(images)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels)
+    with torch.set_grad_enabled(False):
+        outputs = model(images)
+        _, preds = torch.max(outputs, 1)
+        loss = criterion(outputs, labels)
 
-test()
-
-running_loss += loss.item() * images.size(0)
-running_corrects += torch.sum(preds == labels.data)
+    running_loss += loss.item() * images.size(0)
+    running_corrects += torch.sum(preds == labels.data)
 
 epoch_loss = running_loss / 2298
 epoch_acc = running_corrects.double() / 2298
