@@ -17,7 +17,7 @@ import copy
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 25
+num_epochs = 1
 num_classes = 29
 batch_size = 90
 learning_rate = 0.001
@@ -96,7 +96,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adamax(model.parameters(), lr=learning_rate)
 '''
 
-model_conv = torchvision.models.densenet201(pretrained=True)
+model_conv = torchvision.models.densenet161(pretrained=True)
 for param in model_conv.parameters():
     param.requires_grad = False
 
@@ -226,6 +226,7 @@ def predict_single_instance(model, tensor):
 
 def test_data_from_fname(fname):
     im = Image.open('{}/{}'.format(test_dataset, fname))
+    print(im)
     return apply_test_transforms(im)
 
 
@@ -246,4 +247,4 @@ df = df[['ID', 'Label']]
 df.to_csv('submission.csv', index=False)
 
 # Save the model checkpoint
-torch.save(model_conv.state_dict(), 'model.ckpt')
+torch.save(model_conv.state_dict(), 'model.pt')

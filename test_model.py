@@ -53,15 +53,29 @@ class ConvNet(nn.Module):
 
 
 device = torch.device("cuda:0")
+
+#model_ft = torchvision.models.densenet201(pretrained=True)
+#model_ft.classifier = torch.nn.Linear(model_ft.classifier.in_features, 29)
+#pretrained_dic = model_ft.state_dict()
+#model_dic = model_ft.load_state_dict(torch.load('model.ckpt'))
+
+#pretrained_dic = {k: v for k, v in pretrained_dic.items() if k in model_dic}
+#model_dic.update(pretrained_dic)
+#model_ft.load_state_dict(pretrained_dict)
+#model_ft.load_state_dict(checkpoint['model'].state_dict())
+
+
 model = torchvision.models.densenet201(pretrained=True)
+num_ftrs = model.classifier.in_features
+model.classifier = nn.Linear(num_ftrs, 29)
 model.load_state_dict(torch.load('model.ckpt'))
 model.to(device)
 
-im = Image.open('Validation/ValidationImages/6/Image488.jpg')
+im = Image.open('Validation/ValidationImages/1/Image5.jpg')
 im = transforms.functional.to_tensor(im).to(device)
 im = torch.stack([im])
 
 preds = model(im)
 _, predictions = torch.max(preds, 1)
-
-print("Label: ", str(predictions.item()))
+print(preds)
+print("Label: ", str(predictions.item()+1))
