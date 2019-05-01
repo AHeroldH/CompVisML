@@ -4,6 +4,8 @@ from PIL import Image
 import torchvision.transforms as transforms
 import torchvision
 import torch.optim as optim
+import os
+import numpy as np
 
 device = torch.device("cuda:0")
 model = torchvision.models.densenet201(pretrained=True)
@@ -18,38 +20,93 @@ num_classes = 29
 batch_size = 90
 learning_rate = 0.001
 
-valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
-                                                 transform=transforms.ToTensor())
+dataset = 'Test/TestImages'
 
-valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=False)
+
+def make_dataset(dir):
+    images = []
+    dir = os.path.expanduser(dir)
+    for root, _, fnames in sorted(os.walk(dir)):
+        for fname in sorted(fnames):
+            path = os.path.join(root, fname)
+            images.append(path)
+
+    return images
+
+def loader(path):
+    with open(path, 'rb') as f:
+    	img = Image.open(f)
+    	return img.convert('RGB')
+
+class DatasetFolder:
+    """A generic data loader where the samples are arranged in this way: ::
+        root/class_x/xxx.ext
+        root/class_x/xxy.ext
+        root/class_x/xxz.ext
+        root/class_y/123.ext
+        root/class_y/nsdf3.ext
+        root/class_y/asd932_.ext
+    Args:
+        root (string): Root directory path.
+        loader (callable): A function to load a sample given its path.
+        extensions (tuple[string]): A list of allowed extensions.
+            both extensions and is_valid_file should not be passed.
+        transform (callable, optional): A function/transform that takes in
+            a sample and returns a transformed version.
+            E.g, ``transforms.RandomCrop`` for images.
+        target_transform (callable, optional): A function/transform that takes
+            in the target and transforms it.
+        is_valid_file (callable, optional): A function that takes path of an Image file
+            and check if the file is a valid_file (used to check of corrupt files)
+            both extensions and is_valid_file should not be passed.
+     Attributes:
+        classes (list): List of the class names.
+        class_to_idx (dict): Dict with items (class_name, class_index).
+        samples (list): List of (sample path, class_index) tuples
+        targets (list): The class_index value for each image in the dataset
+    """
+
+    def __init__(self):
+        super(DatasetFolder, self).__init__()
+        samples = make_dataset(dataset)
+
+        self.samples = samples
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path = self.samples[index]
+        sample = loader(path)
+        sample = transforms.functional.to_tensor(sample)
+
+        return sample
+
+    def __len__(self):
+        return len(self.samples)
+
+
+test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(),
+                                          batch_size=1,
+                                          shuffle=False)
 
 criterion = nn.CrossEntropyLoss()
 optimizer_conv = optim.SGD(model.classifier.parameters(), lr=learning_rate, momentum=0.9)
 
 model.eval()
 
-running_loss = 0.0
-running_corrects = 0
-for images, labels in valid_loader:
+for images in test_loader:
     images = images.to(device)
-    labels = labels.to(device)
 
     optimizer_conv.zero_grad()
 
     with torch.set_grad_enabled(False):
         outputs = model(images)
         _, preds = torch.max(outputs, 1)
-        loss = criterion(outputs, labels)
-
-    running_loss += loss.item() * images.size(0)
-    running_corrects += torch.sum(preds == labels.data)
-
-epoch_loss = running_loss / 2298
-epoch_acc = running_corrects.double() / 2298
-
-print('Valid Loss: {:.4f} Acc: {:.4f}'.format(epoch_loss, epoch_acc))
+        print((preds.cpu()).item()+1)
 
 im = Image.open('Validation/ValidationImages/1/Image5.jpg')
 im = transforms.functional.to_tensor(im).to(device)
@@ -58,4 +115,4 @@ im = torch.stack([im])
 preds = model(im)
 _, predictions = torch.max(preds, 1)
 print(preds)
-print("Label: ", str(predictions.item()+1))
+print("Label: ", str(predictions.item() + 1))
