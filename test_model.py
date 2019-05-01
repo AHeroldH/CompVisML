@@ -5,13 +5,14 @@ import torchvision.transforms as transforms
 import torchvision
 import torch.optim as optim
 import os
-import numpy as np
+import csv
+import pandas as pd
 
 device = torch.device("cuda:0")
 model = torchvision.models.densenet201(pretrained=True)
 num_ftrs = model.classifier.in_features
 model.classifier = nn.Linear(num_ftrs, 29)
-model.load_state_dict(torch.load('model.ckpt'))
+model.load_state_dict(torch.load('model.pt'))
 model.to(device)
 
 # Hyper parameters
@@ -25,18 +26,23 @@ dataset = 'Test/TestImages'
 
 def make_dataset(dir):
     images = []
+    ids = []
     dir = os.path.expanduser(dir)
     for root, _, fnames in sorted(os.walk(dir)):
         for fname in sorted(fnames):
             path = os.path.join(root, fname)
             images.append(path)
+            id = int(re.search('\d+', fname).group())
+            ids.append(id)
 
-    return images
+    return ids, images
+
 
 def loader(path):
     with open(path, 'rb') as f:
-    	img = Image.open(f)
-    	return img.convert('RGB')
+        img = Image.open(f)
+        return img.convert('RGB')
+
 
 class DatasetFolder:
     """A generic data loader where the samples are arranged in this way: ::
@@ -68,9 +74,10 @@ class DatasetFolder:
 
     def __init__(self):
         super(DatasetFolder, self).__init__()
-        samples = make_dataset(dataset)
+        ids, samples = make_dataset(dataset)
 
         self.samples = samples
+        self.ids = ids
 
     def __getitem__(self, index):
         """
@@ -79,11 +86,12 @@ class DatasetFolder:
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
+        ids = self.ids
         path = self.samples[index]
         sample = loader(path)
         sample = transforms.functional.to_tensor(sample)
 
-        return sample
+        return ids[index], sample
 
     def __len__(self):
         return len(self.samples)
@@ -98,21 +106,38 @@ optimizer_conv = optim.SGD(model.classifier.parameters(), lr=learning_rate, mome
 
 model.eval()
 
-for images in test_loader:
+row = ['ID', 'Label']
+
+os.remove('not_sorted_submission.csv')
+
+with open("not_sorted_submission.csv", "w") as submission_csv:
+    writer = csv.writer(submission_csv)
+    writer.writerow(row)
+
+submission_csv.close()
+
+for ids, images in test_loader:
     images = images.to(device)
+    ids = ids.to(device)
 
     optimizer_conv.zero_grad()
 
     with torch.set_grad_enabled(False):
         outputs = model(images)
         _, preds = torch.max(outputs, 1)
-        print((preds.cpu()).item()+1)
 
-im = Image.open('Validation/ValidationImages/1/Image5.jpg')
-im = transforms.functional.to_tensor(im).to(device)
-im = torch.stack([im])
+    predictions = [ids.item(), preds.item()+1]
 
-preds = model(im)
-_, predictions = torch.max(preds, 1)
-print(preds)
-print("Label: ", str(predictions.item() + 1))
+    with open("not_sorted_submission.csv", "a") as submission_csv:
+        writer = csv.writer(submission_csv)
+        writer.writerow(predictions)
+
+submission_csv.close()
+
+read = pd.read_csv("not_sorted_submission.csv", usecols=['ID', 'Label'], index_col=0)
+
+# sorting based on column labels
+df = read.sort_index()
+df['ID'] = df.index
+df = df[['ID','Label']]
+df.to_csv('submission.csv', index=False)

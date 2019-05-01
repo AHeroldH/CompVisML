@@ -343,7 +343,7 @@ for ids, images in test_loader:
 
 submission_csv.close()
 
-read = pd.read_csv("not_sorted_submission.csv", usecols=['Label'])
+read = pd.read_csv("not_sorted_submission.csv", usecols=['ID', 'Label'], index_col=0)
 
 # sorting based on column labels
 df = read.sort_index()
