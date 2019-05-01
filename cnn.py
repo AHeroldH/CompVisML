@@ -18,7 +18,7 @@ import csv
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 25
+num_epochs = 30
 num_classes = 29
 batch_size = 70
 learning_rate = 0.001
@@ -26,15 +26,13 @@ learning_rate = 0.001
 train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.ToTensor()
     ])
 
 valid_transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.ToTensor()
     ])
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
