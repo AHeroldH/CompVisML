@@ -118,7 +118,10 @@ class DatasetFolder:
         ids = self.ids
         path = self.samples[index]
         sample = loader(path)
-        sample = valid_transform(sample)
+        sample = transforms.functional.resize(sample, 256)
+        sample = transforms.functional.center_crop(sample, 224)
+        sample = transforms.functional.to_tensor(sample)
+        sample = transforms.functional.normalize(sample, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
         return ids[index], sample
 
