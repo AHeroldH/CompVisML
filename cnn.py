@@ -101,10 +101,11 @@ class DatasetFolder:
         targets (list): The class_index value for each image in the dataset
     """
 
-    def __init__(self):
+    def __init__(self, transform):
         super(DatasetFolder, self).__init__()
         ids, samples = make_dataset(dataset)
 
+        self.transform = transform
         self.samples = samples
         self.ids = ids
 
@@ -138,7 +139,7 @@ valid_loader = torch.utils.data.DataLoader(dataset=valid_dataset,
                                            batch_size=batch_size,
                                            shuffle=False)
 
-test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(),
+test_loader = torch.utils.data.DataLoader(dataset=DatasetFolder(valid_transform),
                                           batch_size=1,
                                           shuffle=False)
 
