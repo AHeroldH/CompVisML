@@ -23,11 +23,28 @@ num_classes = 29
 batch_size = 70
 learning_rate = 0.001
 
+train_transforms = {transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])}
+
+valid_transform = {transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])}
+
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
-                                                 transform=transforms.ToTensor())
+                                                 transform=train_transforms)
 
 valid_dataset = torchvision.datasets.ImageFolder(root='Validation/ValidationImages',
-                                                 transform=transforms.ToTensor())
+                                                 transform=valid_transform)
+
+
+class_names = train_dataset.classes
 
 # test_dataset = 'Test/TestImages'
 # test_data_files = os.listdir(test_dataset)
@@ -101,7 +118,7 @@ class DatasetFolder:
         ids = self.ids
         path = self.samples[index]
         sample = loader(path)
-        sample = transforms.functional.to_tensor(sample)
+        sample = valid_transform(sample)
 
         return ids[index], sample
 
@@ -335,7 +352,7 @@ for ids, images in test_loader:
         outputs = model_conv(images)
         _, preds = torch.max(outputs, 1)
 
-    predictions = [ids.item(), preds.item()+1]
+    predictions = [ids.item(), class_names[preds.item()]]
 
     with open("not_sorted_submission.csv", "a") as submission_csv:
         writer = csv.writer(submission_csv)
