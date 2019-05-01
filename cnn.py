@@ -18,9 +18,9 @@ import csv
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 1
+num_epochs = 25
 num_classes = 29
-batch_size = 90
+batch_size = 70
 learning_rate = 0.001
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
@@ -86,9 +86,10 @@ class DatasetFolder:
 
     def __init__(self):
         super(DatasetFolder, self).__init__()
-        samples = make_dataset(dataset)
+        ids, samples = make_dataset(dataset)
 
         self.samples = samples
+        self.ids = ids
 
     def __getitem__(self, index):
         """
@@ -97,11 +98,12 @@ class DatasetFolder:
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        id, path = self.samples[index]
+        ids = self.ids
+        path = self.samples[index]
         sample = loader(path)
         sample = transforms.functional.to_tensor(sample)
 
-        return sample
+        return ids[index], sample
 
     def __len__(self):
         return len(self.samples)
@@ -315,9 +317,13 @@ model_conv.eval()  # eval mode (batchnorm uses moving mean/variance instead of m
 
 row = ['ID', 'Label']
 
-with open("submission.csv", "w") as submission_csv:
+os.remove('not_sorted_submission.csv')
+
+with open("not_sorted_submission.csv", "w") as submission_csv:
     writer = csv.writer(submission_csv)
     writer.writerow(row)
+
+submission_csv.close()
 
 for ids, images in test_loader:
     images = images.to(device)
@@ -329,13 +335,21 @@ for ids, images in test_loader:
         outputs = model_conv(images)
         _, preds = torch.max(outputs, 1)
 
-    row = [ids, preds.item()+1]
+    predictions = [ids.item(), preds.item()+1]
 
-    with open("submission.csv", "w") as submission_csv:
+    with open("not_sorted_submission.csv", "a") as submission_csv:
         writer = csv.writer(submission_csv)
-        writer.writerow(row)
+        writer.writerow(predictions)
 
 submission_csv.close()
+
+read = pd.read_csv("not_sorted_submission.csv", usecols=['Label'])
+
+# sorting based on column labels
+df = read.sort_index()
+df['ID'] = df.index
+df = df[['ID','Label']]
+df.to_csv('submission.csv', index=False)
 
 '''ds = pd.Series({id: label for (id, label) in zip(predicts.keys(), predicts.values())})
 df = pd.DataFrame(ds, columns=['Label']).sort_index()
