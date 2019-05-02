@@ -126,8 +126,8 @@ best_model_wts = copy.deepcopy(model_conv.state_dict())
 best_acc = 0.0
 
 total_step = len(train_loader)
-early_stopping = EarlyStopping(patience=20,
-                             verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
+#early_stopping = EarlyStopping(patience=20,
+#                             verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 
 for epoch in range(num_epochs):
     print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -190,11 +190,11 @@ for epoch in range(num_epochs):
         best_acc = epoch_acc
         #best_model_wts = copy.deepcopy(model_conv.state_dict())
 
-    early_stopping(epoch_loss, model_conv)
+    #early_stopping(epoch_loss, model_conv)
 
-    if early_stopping.early_stop:
-        print("Early stopping")
-        break
+    #if early_stopping.early_stop:
+    #    print("Early stopping")
+    #    break
 
 time_elapsed = time.time() - since
 print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
