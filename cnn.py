@@ -24,16 +24,16 @@ batch_size = 80
 learning_rate = 0.001
 
 train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(),
-        transforms.ToTensor()
-    ])
+    transforms.RandomResizedCrop(224),
+    transforms.RandomHorizontalFlip(),
+    transforms.ColorJitter([0.6, 1.4], [0.6, 1.4], [0.6, 1.4], [0.6, 1.4]),
+    transforms.ToTensor()
+])
 
 valid_transform = transforms.Compose([
-        transforms.CenterCrop(224),
-        transforms.ToTensor()
-    ])
+    transforms.CenterCrop(224),
+    transforms.ToTensor()
+])
 
 train_dataset = torchvision.datasets.ImageFolder(root='Train/TrainImages',
                                                  transform=train_transforms)
@@ -113,10 +113,10 @@ criterion = nn.CrossEntropyLoss()
 
 # Observe that only parameters of final layer are being optimized as
 # opposed to before.
-optimizer_conv = optim.SGD(model_conv.classifier.parameters(), lr=learning_rate, momentum=0.9)
+optimizer_conv = optim.Adam(model_conv.classifier.parameters(), lr=learning_rate)
 
 # Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
+exp_lr_scheduler = lr_scheduler.CosineAnnealingLR(optimizer_conv, num_epochs)
 
 # Train the model
 
@@ -126,14 +126,14 @@ best_model_wts = copy.deepcopy(model_conv.state_dict())
 best_acc = 0.0
 
 total_step = len(train_loader)
-#early_stopping = EarlyStopping(patience=20,
+# early_stopping = EarlyStopping(patience=20,
 #                             verbose=True)  # early stopping patience; how long to wait after last time validation loss improved
 
 for epoch in range(num_epochs):
     print('Epoch {}/{}'.format(epoch, num_epochs - 1))
     print('-' * 10)
 
-    #exp_lr_scheduler.step()
+    # exp_lr_scheduler.step()
     model_conv.train()
 
     running_loss = 0.0
@@ -188,18 +188,17 @@ for epoch in range(num_epochs):
 
     if epoch_acc > best_acc:
         best_acc = epoch_acc
-        #best_model_wts = copy.deepcopy(model_conv.state_dict())
+        # best_model_wts = copy.deepcopy(model_conv.state_dict())
 
-    #early_stopping(epoch_loss, model_conv)
+    # early_stopping(epoch_loss, model_conv)
 
-    #if early_stopping.early_stop:
+    # if early_stopping.early_stop:
     #    print("Early stopping")
     #    break
 
 time_elapsed = time.time() - since
 print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 print('Best val Acc: {:4f}'.format(best_acc))
-
 
 # Test the model
 
@@ -238,7 +237,7 @@ read = pd.read_csv("not_sorted_submission.csv", usecols=['ID', 'Label'], index_c
 # sorting based on column labels
 df = read.sort_index()
 df['ID'] = df.index
-df = df[['ID','Label']]
+df = df[['ID', 'Label']]
 df.to_csv('submission.csv', index=False)
 
 # Save the model checkpoint
