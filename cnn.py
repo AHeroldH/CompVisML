@@ -21,7 +21,7 @@ device = torch.device('cuda:0')
 num_epochs = 100
 num_classes = 29
 batch_size = 50
-learning_rate = 0.00075
+learning_rate = 0.001
 
 train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
