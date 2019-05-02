@@ -26,7 +26,6 @@ learning_rate = 0.001
 train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomPerspective(),
         transforms.ColorJitter(),
         transforms.ToTensor()
     ])
