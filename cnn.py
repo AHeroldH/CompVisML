@@ -18,7 +18,7 @@ import csv
 device = torch.device('cuda:0')
 
 # Hyper parameters
-num_epochs = 100
+num_epochs = 60
 num_classes = 29
 batch_size = 80
 learning_rate = 0.001
@@ -26,7 +26,7 @@ learning_rate = 0.001
 train_transforms = transforms.Compose([
     transforms.RandomResizedCrop(224),
     transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter([0.6, 1.4], [0.6, 1.4], [0.6, 1.4], [0.6, 1.4]),
+    transforms.ColorJitter(),
     transforms.ToTensor()
 ])
 
@@ -188,13 +188,7 @@ for epoch in range(num_epochs):
 
     if epoch_acc > best_acc:
         best_acc = epoch_acc
-        # best_model_wts = copy.deepcopy(model_conv.state_dict())
-
-    # early_stopping(epoch_loss, model_conv)
-
-    # if early_stopping.early_stop:
-    #    print("Early stopping")
-    #    break
+        best_model_wts = copy.deepcopy(model_conv.state_dict())
 
 time_elapsed = time.time() - since
 print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
